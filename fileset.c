@@ -1017,18 +1017,18 @@ fileset_create(fileset_t *fileset)
 		sched_setaffinity(0, sizeof(nodeset0), &nodeset0);
 	}
 	else if(strcmp(fileset_path, "/mnt/nova/f1") == 0){
-		printf("alloc file in pmem1\n");
-		sched_setaffinity(0, sizeof(nodeset1), &nodeset1);
+		printf("alloc file in pmem0\n");
+		sched_setaffinity(0, sizeof(nodeset0), &nodeset0);
 	}
 
 	else if(strcmp(fileset_path, "/mnt/nova/f2") == 0){
-		printf("alloc file in pmem1\n");
-		sched_setaffinity(0, sizeof(nodeset1), &nodeset1);
+		printf("alloc file in pmem0\n");
+		sched_setaffinity(0, sizeof(nodeset0), &nodeset0);
 	}
 	
 	else if(strcmp(fileset_path, "/mnt/nova/f3") == 0){
-		printf("alloc file in pmem1\n");
-		sched_setaffinity(0, sizeof(nodeset1), &nodeset1);
+		printf("alloc file in pmem0\n");
+		sched_setaffinity(0, sizeof(nodeset0), &nodeset0);
 	}
 
 	fileset_name = avd_get_str(fileset->fs_name);
