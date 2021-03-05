@@ -34,6 +34,8 @@
 #include "flowop.h"
 #include "ipc.h"
 
+#include <sched.h>
+
 static threadflow_t *threadflow_define_common(procflow_t *procflow,
     char *name, threadflow_t *inherit, int instance);
 
@@ -108,18 +110,64 @@ threadflow_init(procflow_t *procflow)
 	int ret = 0;
 
 	(void) ipc_mutex_lock(&filebench_shm->shm_threadflow_lock);
+	
+	//cpu_set_t cpuset, cpuset2;
+	//int j;
+	//printf("test %s\n\n", threadflow->tf_name);
+	
 
 	while (threadflow) {
 		threadflow_t *newthread;
 		int instances;
 		int i;
-
+		int j;
 		instances = avd_get_int(threadflow->tf_instances);
-		filebench_log(LOG_VERBOSE,
+	
+		filebench_log(LOG_VERBOSE,		
 		    "Starting %d %s threads",
 		    instances, threadflow->tf_name);
+		
+		//node partition
+		cpu_set_t cpuset, cpuset2;		
+				
+		if(strcmp(threadflow->tf_name, "filereaderthread_0") == 0){
+			printf("reader thread in Node #0\n");
+			CPU_ZERO(&cpuset);
+			for(j=0; j<28; j++){
+				CPU_SET(j, &cpuset);
+			}
+			sched_setaffinity(0, sizeof(cpuset), &cpuset);
+		}
+		else{
+			printf("reader thread in Node #1\n");
+			CPU_ZERO(&cpuset2);
+			for(j=28; j<56; j++){
+				CPU_SET(j, &cpuset2);
+			}
+			sched_setaffinity(0, sizeof(cpuset2), &cpuset2);
+		}
+		
+		
 
 		for (i = 1; i < instances; i++) {
+	
+			
+	
+			
+			
+			//printf("test %d\n", i);
+			//sched_setaffinity(0, sizeof(cpuset), &cpuset);
+			/*			
+			if(i < 28){
+				//CPU_ZERO(&cpuset);
+				//CPU_SET(i, &cpuset);
+				sched_setaffinity(0, sizeof(cpuset), &cpuset);
+			
+			}
+			else{
+				sched_setaffinity(0, sizeof(cpuset2), &cpuset2);
+			}
+			*/	
 			/* Create threads */
 			newthread =
 			    threadflow_define_common(procflow,
@@ -300,7 +348,6 @@ threadflow_allstarted(pid_t pid, threadflow_t *threadflow)
 
 	while (threadflow) {
 		int waits;
-
 		if ((threadflow->tf_instance == 0) ||
 		    (threadflow->tf_instance == FLOW_MASTER)) {
 			threadflow = threadflow->tf_next;
@@ -413,7 +460,6 @@ threadflow_define(procflow_t *procflow, char *name,
 		return (NULL);
 
 	threadflow->tf_instances = instances;
-
 	(void) ipc_mutex_unlock(&filebench_shm->shm_threadflow_lock);
 
 	return (threadflow);

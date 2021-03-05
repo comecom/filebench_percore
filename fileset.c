@@ -33,11 +33,15 @@
 #include <sys/mman.h>
 #include <sys/shm.h>
 
+#include <sched.h> //for set affinity
+
 #include "filebench.h"
 #include "fileset.h"
 #include "gamma_dist.h"
 #include "utils.h"
 #include "fsplug.h"
+
+#include "threadflow.h"
 
 static int filecreate_done;
 
@@ -988,12 +992,43 @@ fileset_create(fileset_t *fileset)
 	int preallocated = 0;
 	int reusing;
 	uint64_t preallocpercent;
-
 	fileset_path = avd_get_str(fileset->fs_path);
+	
+	//printf("ttttttttttttttt %s\n", fileset_path);
 	if (!fileset_path) {
 		filebench_log(LOG_ERROR, "%s path not set",
 		    fileset_entity_name(fileset));
 		return FILEBENCH_ERROR;
+	}
+
+	cpu_set_t nodeset0, nodeset1;
+	int k;
+
+	CPU_ZERO(&nodeset0);
+	CPU_ZERO(&nodeset1);
+	for(k=0; k<28; k++){
+		CPU_SET(k, &nodeset0);
+	}
+	for(k=28; k<56; k++){
+		CPU_SET(k, &nodeset1);
+	}
+	if(strcmp(fileset_path, "/mnt/nova/f0") == 0){
+		printf("alloc file in pmem0\n");
+		sched_setaffinity(0, sizeof(nodeset0), &nodeset0);
+	}
+	else if(strcmp(fileset_path, "/mnt/nova/f1") == 0){
+		printf("alloc file in pmem1\n");
+		sched_setaffinity(0, sizeof(nodeset1), &nodeset1);
+	}
+
+	else if(strcmp(fileset_path, "/mnt/nova/f2") == 0){
+		printf("alloc file in pmem1\n");
+		sched_setaffinity(0, sizeof(nodeset1), &nodeset1);
+	}
+	
+	else if(strcmp(fileset_path, "/mnt/nova/f3") == 0){
+		printf("alloc file in pmem1\n");
+		sched_setaffinity(0, sizeof(nodeset1), &nodeset1);
 	}
 
 	fileset_name = avd_get_str(fileset->fs_name);
@@ -1002,7 +1037,26 @@ fileset_create(fileset_t *fileset)
 		    fileset_entity_name(fileset));
 		return FILEBENCH_ERROR;
 	}
+		
+	//printf("jw_fileset_name %s\n", fileset_name);
+	//cpu_set_t nodeset;
+	/*	
+	if(strcmp(fileset_name, "bigfileset") == 0 ||
+		strcmp(fileset_name, "logfile") == 0){
+		printf("set node 0\n");
 
+		CPU_ZERO(&nodeset);
+		CPU_SET(0, &nodeset);
+		sched_setaffinity(0, sizeof(nodeset), &nodeset);
+	}
+	else{
+		printf("set node 1\n");
+		CPU_ZERO(&nodeset);
+		CPU_SET(29, &nodeset);
+		sched_setaffinity(0, sizeof(nodeset), &nodeset);
+	
+	}
+	*/
 	/* treat raw device as special case */
 	if (fileset->fs_attrs & FILESET_IS_RAW_DEV)
 		return FILEBENCH_OK;
@@ -1064,10 +1118,43 @@ fileset_create(fileset_t *fileset)
 
 	randno = ((RAND_MAX * (100 - preallocpercent)) / 100);
 
+
+	int flag_count = 0;
+	int i;
+	double alloc_ratio;
+	u_longlong_t total_fileset = (u_longlong_t)fileset->fs_constentries;
+	cpu_set_t cpuset;
+
 	/* alloc any files, as required */
 	fileset_pickreset(fileset, FILESET_PICKFILE);
 	while ((entry = fileset_pick(fileset,
 	    FILESET_PICKFREE | FILESET_PICKFILE, 0, 0))) {
+			
+		alloc_ratio = (double)preallocated / total_fileset;
+		
+		/*
+		if(alloc_ratio >= 0.0 && flag_count == 0){
+			CPU_ZERO(&cpuset);
+			for(i=0; i<28; i++){
+				CPU_SET(i, &cpuset);
+			}
+			sched_setaffinity(0, sizeof(cpuset), &cpuset);
+			//pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+			flag_count++;
+			printf("set node0\n");
+		}
+		*/
+		/*	
+		if(alloc_ratio >= 0.5  && flag_count == 1){
+			CPU_ZERO(&cpuset);
+			CPU_SET(29, &cpuset);
+			sched_setaffinity(0, sizeof(cpuset), &cpuset);
+			//pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+			flag_count++;
+			printf("set node1\n");
+				
+		}
+		*/
 		pthread_t tid;
 		int newrand;
 
@@ -1081,6 +1168,27 @@ fileset_create(fileset_t *fileset)
 
 		preallocated++;
 
+		
+		int i;
+		
+		if((preallocated == total_fileset) && flag_count == 1){
+			//printf("set running threas on node0,1\n");
+		
+			//printf("set running threads on node 0.\n");
+			CPU_ZERO(&cpuset);
+			
+			//CPU_CLR(29, &cpuset);
+			
+			for(i=0; i<56; i++){
+				CPU_SET(i, &cpuset);
+			}
+			sched_setaffinity(0, sizeof(cpuset), &cpuset);
+			
+			//int tmp = sched_getaffinity(0, sizeof(cpuset), &cpuset);
+			//printf("get %d\n", tmp);
+			flag_count++;
+		}
+		
 		if (reusing)
 			entry->fse_flags |= FSE_REUSING;
 		else
