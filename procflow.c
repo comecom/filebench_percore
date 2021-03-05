@@ -169,7 +169,6 @@ procflow_create_all_procs(void)
 		/* Create instances of procflow */
 		for (i = 0; (i < instances) && (ret == 0); i++) {
 			procflow_t *newproc;
-
 			/* Define procflows and add them to the list */
 			newproc =
 			    procflow_define_common(&filebench_shm->shm_procflowlist,
