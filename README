@@ -1,3 +1,11 @@
+percore setup
+=======================================================
+threadflow.c : Can handle on which Node the thread wil work (Node#0 or Node#1)
+fileset.c : Can handle which Pmem to pre-allocate file to (Pmem#0 or Pmem#1)
+
+mywebserver0~3.f : webserver workload configuration
+Can handle filesize, number of files, number of reader thread
+
 Filebench - A Model Based File System Workload Generator
 ========================================================
 
